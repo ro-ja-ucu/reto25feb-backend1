@@ -3,7 +3,7 @@ from fastapi import FastAPI, Query
 app = FastAPI()
 
 
-@app.get("/convert/ctof")
+@app.get("/convertir")
 def celsius_to_fahrenheit(
     celsius: float = Query(..., description="Temperatura en grados Celsius")
 ):

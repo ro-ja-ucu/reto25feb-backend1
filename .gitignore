@@ -1,4 +1,5 @@
-mysql
+# environment variables
 .env
+
+# IDE files
 .idea
-apitest
