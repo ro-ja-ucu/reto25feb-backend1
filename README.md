@@ -9,21 +9,26 @@ Se provee un `docker-compose.yaml` que levanta una base de datos MySQL y una API
 ## Instrucciones
 
 1. Clonar el repositorio.
-2. Copiar el archivo `.env.example` a `.env`.
+2. Renombrar el archivo `.env.example` a `.env`.
 3. Levantar los servicios con el comando `docker-compose up -d --build`.
 
 ## Descripción de Servicios
 
 ### Base de Datos
 
-La base de datos cuenta con una tabla `temperatura` que tiene la siguiente estructura:
+La base de datos cuenta con una tabla `temperatura` que registra por pais y por año las temperaturas, y una tabla `pais` que registra los nombres de los países. Estas siguen las siguientes estructuras:
 
 |temperatura|
 |--------------|
-|**PK** temperatura_paiscodigo|
+|**PK** temperatura_paiscodigo **FK** pais.pais_codigo|
 |**PK** temperatura_anio|
 |temperatura_celsius|
 |temperatura_fahrenheit|
+
+|pais|
+|------|
+|**PK** pais_codigo|
+|pais_nombre|
 
 Por defecto, conexión a la base de datos se realiza con las siguientes credenciales:
 - Usuario: `reto25`
