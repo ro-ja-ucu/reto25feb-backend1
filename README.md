@@ -6,7 +6,11 @@ Se solicita desarrollar una API REST en Python que permita obtener consultar inf
 
 Se provee un `docker-compose.yaml` que levanta una base de datos MySQL y una API externa que permite convertir de grados Celsius a grados Fahrenheit. 
 
-Los servicios se pueden levantar con el comando `docker-compose up -d --build`.
+## Instrucciones
+
+1. Clonar el repositorio.
+2. Copiar el archivo `.env.example` a `.env`.
+3. Levantar los servicios con el comando `docker-compose up -d --build`.
 
 ## Descripción de Servicios
 
