@@ -1,0 +1,11 @@
+[project]
+name = "tempapi"
+version = "0.1.0"
+description = "API simple para conversión de temperaturas"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.8",
+    "pydantic>=2.10.6",
+    "uvicorn>=0.34.0",
+]

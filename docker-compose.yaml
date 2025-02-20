@@ -1,0 +1,44 @@
+name: reto25e1
+
+services:
+  mysql:
+    image: mysql:9.2
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    env_file:
+      - .env
+    hostname: mysql
+    restart: unless-stopped
+    ports:
+      - ${PORT_MYSQL}:3306
+    volumes:
+      - "./sql/temperaturas.sql:/docker-entrypoint-initdb.d/init.sql"
+
+  postgres:
+    image: postgres:17.2
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - .env
+    hostname: postgres
+    restart: unless-stopped
+    ports:
+      - ${PORT_POSTGRES}:5432
+    volumes:
+      - "./sql/temperaturas.sql:/docker-entrypoint-initdb.d/init.sql"
+
+  tempapi:
+    build: 
+      context: ./tempapi
+      dockerfile: tempapi.dockerfile
+    env_file:
+      - .env
+    hostname: tempapi
+    restart: unless-stopped
+    ports:
+      - ${PORT_TEMPAPI}:8088
