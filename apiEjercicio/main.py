@@ -1,76 +1,73 @@
 from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
+from sqlmodel import SQLModel, Field, Session, select
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 import requests
 
 # Datos de la conexión
 DATABASE_URL = "mysql+pymysql://root:pass25@localhost:3306/reto25"
-
-
 engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 app = FastAPI()
 
 API_PARA_CONVERTIR_URL = "http://localhost:8088/convertir"
 
+class Pais(SQLModel, table=True):
+    pais_codigo: str = Field(primary_key=True)
+    pais_nombre: str
+
+class Temperatura(SQLModel, table=True):
+    temperatura_paiscodigo: str = Field(foreign_key="pais.pais_codigo", primary_key=True)
+    temperatura_anio: int = Field(primary_key=True)
+    temperatura_celsius: float
+    temperatura_fahrenheit: float | None = None
+
+
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@app.get("/")
-def main():
-    return {"message": "Hello from apiejercicio!"}
-
-@app.get("/test-db")
-def test_db(db=Depends(get_db)):
-    result = db.execute(text("SELECT DATABASE();"))
-    return {"database": result.scalar()}
+    with Session(engine) as session:
+        yield session
 
 
 @app.get("/temperatura/{codigo_pais}/{anio}")
 def obtener_temperatura(codigo_pais: str, anio: int, db: Session = Depends(get_db)):
+    # Buscar en la BD la temperatura en Celsius
+    stmt = select(Temperatura).where(
+        (Temperatura.temperatura_paiscodigo == codigo_pais) &
+        (Temperatura.temperatura_anio == anio)
+    )
+    temperatura = db.exec(stmt).first()
 
-    query = text("""
-        SELECT t.temperatura_celsius, t.temperatura_fahrenheit, p.pais_nombre 
-        FROM temperatura t
-        JOIN pais p ON t.temperatura_paiscodigo = p.pais_codigo
-        WHERE t.temperatura_paiscodigo = :codigo_pais AND t.temperatura_anio = :anio
-    """)
+    if not temperatura:
+        raise HTTPException(status_code=404, detail="No se encontró la temperatura para el país y año dados")
 
-    result = db.execute(query, {"codigo_pais": codigo_pais, "anio": anio}).fetchone()
+    stmt_pais = select(Pais.pais_nombre).where(Pais.pais_codigo == codigo_pais)
+    pais = db.exec(stmt_pais).first()
 
-    if not result:
-        raise HTTPException(status_code=404, detail="No se encontró información para ese país y año")
+    if not pais:
+        raise HTTPException(status_code=404, detail="No se encontró el país en la base de datos")
 
-    celsius, fahrenheit, pais_nombre = result
+    if temperatura.temperatura_fahrenheit is None:
+        try:
+            response = requests.get(API_PARA_CONVERTIR_URL, params={"celsius": temperatura.temperatura_celsius})
+            response.raise_for_status()
+            fahrenheit = response.json().get("fahrenheit")
 
-    # Si ya no guardamos en la BD llamamos a la api externa
-    if fahrenheit is None:
-        response = requests.get(API_PARA_CONVERTIR_URL, params={"celsius": celsius})
-        if response.status_code != 200:
+            if fahrenheit is None:
+                raise HTTPException(status_code=500, detail="Error en la respuesta de la API externa")
+
+            temperatura.temperatura_fahrenheit = fahrenheit
+            db.add(temperatura)
+            db.commit()
+
+        except requests.RequestException:
             raise HTTPException(status_code=500, detail="Error al consultar la API externa")
 
-        fahrenheit = response.json()["fahrenheit"]
-
-
-        update_query = text("""
-            UPDATE temperatura 
-            SET temperatura_fahrenheit = :fahrenheit 
-            WHERE temperatura_paiscodigo = :codigo_pais AND temperatura_anio = :anio
-        """)
-        db.execute(update_query, {"fahrenheit": fahrenheit, "codigo_pais": codigo_pais, "anio": anio})
-        db.commit()
-
-
     return {
-        "pais": pais_nombre,
+        "pais": pais,
         "año": anio,
-        "celsius": celsius,
-        "fahrenheit": fahrenheit
+        "celsius": temperatura.temperatura_celsius,
+        "fahrenheit": temperatura.temperatura_fahrenheit
     }
 
 
